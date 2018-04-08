@@ -1,0 +1,131 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+"""
+
+import os
+import sys
+import logging
+import requests
+from PyvmomiClient import PyvmomiClient
+import socket
+
+
+
+LOGGER = logging.getLogger('fence_vmware_pyvmomi')
+"""
+logging: Logger instance
+"""
+LOG_LEVEL = None
+"""
+logging.log_level: log level
+"""
+PYVMOMI_CLIENT = None
+"""
+PyvmomiClient: PyvmomiClient instance
+"""
+PARAMETERS = {}
+"""
+dict: Runtime parameters
+"""
+DEVICE_OPTS = [ "hostname", "port", "username", "password", "vm_name" ]
+"""
+dict: required device options
+"""
+ACTIONS = [
+    "on", "off", "status", "getconfignames", "getinfo-devdescr", \
+    "getinfo-devurl", "gethosts"
+]
+"""
+dict: valid device actions
+"""
+
+
+
+def process(action):
+    """
+    This function processes the STONITH action
+
+    :param action: action
+    :type action: str
+    """
+    if action == "on":
+        #turn VM on
+        PYVMOMI_CLIENT.poweron_vm(PARAMETERS['vm_name'])
+    elif action == "off":
+        #turn VM off
+        PYVMOMI_CLIENT.poweroff_vm(PARAMETERS['vm_name'])
+    elif action == "status":
+        #return status
+        print PYVMOMI_CLIENT.powerstate_vm(PARAMETERS['vm_name'])
+    elif action == "getconfignames":
+        #print configuration parameters
+        for item in DEVICE_OPTS:
+            print item
+    elif action == "getinfo-devdescr":
+        #get device description
+        print("External stonith plugin for HAv2 which connects to "
+            "VMware ESX/ESXi and vCenter server via HTTPS. "
+            "2018 by Christian Stankowic. (info at cstan dot io)"
+        )
+    elif action == "getinfo-devurl":
+        #print device information
+        print "https://github.com/stdevel/fence_vmware_pyvmomi"
+    elif action == "gethosts":
+        #get hosts controlled by this device
+        print PARAMETERS['vm_name']
+
+
+
+def main():
+    """
+    This is the main function.
+    """
+    global PYVMOMI_CLIENT
+    global LOG_LEVEL
+
+    #get device options
+    for name in DEVICE_OPTS:
+        try:
+            PARAMETERS[name] = os.environ.get(name, '').split()[0]
+        except IndexError:
+            PARAMETERS[name] = ''
+            LOGGER.debug("Missing parameter: '{}'".format(name))
+            #sys.exit(1)
+
+    #set debug mode
+    try:
+        if os.environ.get("debug", "").split()[0] == "1":
+            LOG_LEVEL = logging.DEBUG
+    except IndexError:
+            LOG_LEVEL = logging.CRITICAL
+
+    #set logging level
+    logging.basicConfig()
+    LOGGER.setLevel(LOG_LEVEL)
+
+    #instance pyvmomi client
+    try:
+        PYVMOMI_CLIENT = PyvmomiClient(
+            LOG_LEVEL, PARAMETERS["hostname"], PARAMETERS["username"],
+            PARAMETERS["password"]
+        )
+    except socket.gaierror:
+        #LOGGER.error("Invalid hostname/port combination?")
+        #You shall pass
+        pass
+
+    #process _all_ the zombies!
+    try:
+        if sys.argv[1] in ACTIONS:
+            process(sys.argv[1])
+    except IndexError:
+        #die in a fire
+        LOGGER.error("Missing action!")
+        sys.exit(1)
+
+
+
+if __name__ == "__main__":
+    #fire it up
+    main()

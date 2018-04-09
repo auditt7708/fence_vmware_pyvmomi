@@ -4,23 +4,15 @@
 # Why?
 Yes, I know - there already some STONITH plugins for VMware - such as ``external/vmware`` and ``external/fence_vmware_soap``. While the first one looks pretty outdated to me, the second alternative requires the [VMware vSphere Perl SDK](https://my.vmware.com/de/web/vmware/details?downloadGroup=VS-PERL-SDK65&productId=614). Unfortunately, this SDK is only supported for some selected Linux distributions (*such as Enterprise Linux and some Ubuntu versions*). On the other hand, the ([VMware vSphere API Python Bindings](https://github.com/vmware/pyvmomi)) are easier to handle and work on a broader range of Linux distributions.
 
-# Current state
-This plugin is pretty new; it has not been finished, yet:
-
-- Working
-  - Fencing manually using the script
-  - Fencing via the ``stonith`` command
-- TODO
-  - Write resource agent to make plugin usable via Pacemaker
-  - Create RPM package
-
 # Requirements
 To use this plugin, you will need:
 - [pyVmomi](https://github.com/vmware/pyvmomi) Python bindings
+  - **Version 6.0** or higher! Use [PIP](https://pypi.python.org) if your Linux distribution's package is outdated! (*otherwise you will get SSL errors*)
+- Python modules ``requests``, ``socket``, ``logging`` and ``urlparse``
 - vCenter access
 
 ## vCenter permissions
-In order to control a particular VM's power state, you will need the following permissions to that object:
+In order to control a particular VM's power state, you will need the following permissions to the corresponding object:
 - Virtual machine
   - Interaction
     - Power on
@@ -77,5 +69,40 @@ Power-off VM:
 
 Power-on VM:
 ```
-# stonith -t external/fence_vmware_pyvmomi hostname=vcenter.localdomain.loc username="vsphere.local\giertz" password="jack" vm_name="pinkepank" -T off pinkepank
+# stonith -t external/fence_vmware_pyvmomi hostname=vcenter.localdomain.loc username="vsphere.local\giertz" password="chad" vm_name="pinkepank" -T off pinkepank
+```
+
+## Via pacemaker
+The first step is to create primitives for your cluster nodes withing the ``crm`` shell:
+```
+primitive fence_vcenter_nodeA stonith:fence_vmware_pyvmomi \
+    op monitor interval=60 timeout=120 \
+    params username="vsphere.local\giertz" password="chad" hostname=vcenter.localdomain.loc port=443 vm_name=nodeA
+primitive fence_vcenter_nodeB stonith:fence_vmware_pyvmomi \
+    op monitor interval=60 timeout=120 \
+    params username="vsphere.local\giertz" password="chad" hostname=vcenter.localdomain.loc port=443 vm_name=nodeB
+...
+```
+
+The next step is to create locations to ensure that cluster nodes are fencing each other:
+```
+location loc_stonith-deb9a fence_vcenter_nodeA \
+	-inf: nodeB.localdomain.loc
+location loc_stonith-deb9b fence_vcenter_nodeB \
+   	-inf: nodeA.localdomain.loc
+```
+
+Finally, enable STONITH and - if required - disable the ignore quorum policy:
+```
+property cib-bootstrap-options: \
+...
+stonith-enabled=true \
+stonith-action=poweroff \
+no-quorum-policy=ignore \
+...
+```
+
+Try fencing a particular node:
+```
+# crm node fence nodeA.localdomain.loc
 ```

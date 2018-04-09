@@ -51,7 +51,7 @@ $ hostname="vcenter.localdomain.loc" port="443" username="vsphere.local\giertz" 
 ```
 
 ## Via ``stonith``
-Move ``fence_vmware_pyvmomi`` and ``PyvmomiClient.py`` to ``/usr/lib/stonith/plugins/external``.
+Move ``fence_vmware_pyvmomi`` to ``/usr/lib/stonith/plugins/external``.
 
 ### Examples
 Retrieve VM power state:

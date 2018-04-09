@@ -69,7 +69,7 @@ Power-off VM:
 
 Power-on VM:
 ```
-# stonith -t external/fence_vmware_pyvmomi hostname=vcenter.localdomain.loc username="vsphere.local\giertz" password="chad" vm_name="pinkepank" -T off pinkepank
+# stonith -t external/fence_vmware_pyvmomi hostname=vcenter.localdomain.loc username="vsphere.local\giertz" password="chad" vm_name="pinkepank" -T on pinkepank
 ```
 
 ## Via pacemaker

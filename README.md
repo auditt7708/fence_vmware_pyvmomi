@@ -75,10 +75,10 @@ Power-on VM:
 ## Via pacemaker
 The first step is to create primitives for your cluster nodes withing the ``crm`` shell:
 ```
-primitive fence_vcenter_nodeA stonith:fence_vmware_pyvmomi \
+primitive fence_vcenter_nodeA stonith:external/fence_vmware_pyvmomi \
     op monitor interval=60 timeout=120 \
     params username="vsphere.local\giertz" password="chad" hostname=vcenter.localdomain.loc port=443 vm_name=nodeA
-primitive fence_vcenter_nodeB stonith:fence_vmware_pyvmomi \
+primitive fence_vcenter_nodeB stonith:external/fence_vmware_pyvmomi \
     op monitor interval=60 timeout=120 \
     params username="vsphere.local\giertz" password="chad" hostname=vcenter.localdomain.loc port=443 vm_name=nodeB
 ...
@@ -87,9 +87,9 @@ primitive fence_vcenter_nodeB stonith:fence_vmware_pyvmomi \
 The next step is to create locations to ensure that cluster nodes are fencing each other:
 ```
 location loc_stonith-deb9a fence_vcenter_nodeA \
-	-inf: nodeB.localdomain.loc
+	-inf: nodeA.localdomain.loc
 location loc_stonith-deb9b fence_vcenter_nodeB \
-   	-inf: nodeA.localdomain.loc
+   	-inf: nodeB.localdomain.loc
 ```
 
 Finally, enable STONITH and - if required - disable the ignore quorum policy:
